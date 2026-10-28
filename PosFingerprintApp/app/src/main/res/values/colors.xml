@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand -->
+    <color name="ink">#0E1A3A</color>
+    <color name="ink_2">#1F3A8A</color>
+    <color name="signal">#2F5BFF</color>
+    <color name="teal">#14B8A6</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Surfaces & text (light) -->
+    <color name="bg">#F4F6FA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_alt">#EDF1F8</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#556075</color>
+    <color name="text_tertiary">#8A93A6</color>
+    <color name="divider">#E2E7F0</color>
+    <color name="primary_container">#E7ECFF</color>
+    <color name="on_primary_container">#1E3FC9</color>
+
+    <!-- Status -->
+    <color name="success">#0E9F8E</color>
+    <color name="success_container">#DDF5F1</color>
+    <color name="warning">#C27803</color>
+    <color name="warning_container">#FCF0D9</color>
+    <color name="error">#E5484D</color>
+    <color name="error_container">#FDE7E8</color>
+
+    <!-- Status dots on the dark hero card (same in both themes) -->
+    <color name="dot_online">#4ADE80</color>
+    <color name="dot_offline">#FBBF24</color>
+    <color name="dot_idle">#94A3B8</color>
+    <color name="hero_glass">#1FFFFFFF</color>
+    <color name="hero_text_dim">#B8C3DE</color>
+</resources>

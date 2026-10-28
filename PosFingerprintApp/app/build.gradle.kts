@@ -11,8 +11,8 @@ android {
         applicationId = "com.posfingerprint.app"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -32,5 +32,7 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.biometric:biometric:1.1.0")
 }

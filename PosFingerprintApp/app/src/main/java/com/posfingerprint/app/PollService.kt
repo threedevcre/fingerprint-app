@@ -35,10 +35,12 @@ class PollService : Service() {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
+        val host = Prefs(this).host
         val notification: Notification = NotificationCompat.Builder(this, CH_SERVICE)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentTitle("POS Fingerprint")
-            .setContentText("Waiting for requests")
+            .setSmallIcon(R.drawable.ic_stat_fingerprint)
+            .setColor(getColor(R.color.ink))
+            .setContentTitle("Ready for POS logins")
+            .setContentText(if (host.isEmpty()) "Waiting for requests" else "Connected to $host")
             .setOngoing(true)
             .setContentIntent(open)
             .build()
@@ -110,11 +112,11 @@ class PollService : Service() {
 
     private fun notifyRequest(req: JSONObject) {
         val isRegister = req.getString("kind") == "register"
-        val title = if (isRegister) "Set up fingerprint" else "POS login request"
+        val title = if (isRegister) "Register your fingerprint" else "POS login request"
         val text = if (isRegister) {
-            "For " + req.optString("employee")
+            "Odoo is linking a fingerprint for " + req.optString("employee").ifEmpty { "an employee" }
         } else {
-            "Log in to " + req.optString("pos_name").ifEmpty { "the POS" }
+            "Tap to approve the login to " + req.optString("pos_name").ifEmpty { "the POS" }
         }
         val intent = Intent(this, ApprovalActivity::class.java)
             .putExtra("request", req.toString())
@@ -124,7 +126,9 @@ class PollService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val n = NotificationCompat.Builder(this, CH_REQUESTS)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_stat_fingerprint)
+            .setColor(getColor(R.color.signal))
+            .setCategory(NotificationCompat.CATEGORY_CALL)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

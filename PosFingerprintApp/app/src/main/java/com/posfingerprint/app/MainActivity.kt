@@ -7,50 +7,92 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
-import android.widget.Button
-import android.widget.EditText
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.isVisible
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 
+/** Home: this phone's status, its POS terminals, fingerprints and recent activity. */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var prefs: Prefs
-    private lateinit var etUrl: EditText
-    private lateinit var etKey: EditText
-    private lateinit var etDb: EditText
-    private lateinit var tvStatus: TextView
-    private lateinit var tvKeys: TextView
+
+    private lateinit var root: View
+    private lateinit var tvGreeting: TextView
+    private lateinit var dotStatus: View
+    private lateinit var tvPill: TextView
+    private lateinit var tvHeroTitle: TextView
+    private lateinit var tvHeroSubtitle: TextView
+    private lateinit var tvHeroNote: TextView
+    private lateinit var statsRow: View
+    private lateinit var btnSetup: MaterialButton
+    private lateinit var tvStatPos: TextView
+    private lateinit var tvStatProfiles: TextView
+    private lateinit var tvStatToday: TextView
+    private lateinit var tvCountPos: TextView
+    private lateinit var tvCountProfiles: TextView
+    private lateinit var listPos: LinearLayout
+    private lateinit var listProfiles: LinearLayout
+    private lateinit var listActivity: LinearLayout
+    private lateinit var cardActivity: View
+    private lateinit var emptyPos: View
+    private lateinit var emptyProfiles: View
+    private lateinit var emptyActivity: View
+
+    private var shownRevision = -1
+    private var shownConnected: Boolean? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val ticker = object : Runnable {
         override fun run() {
-            refresh()
+            refreshStatus()
+            if (prefs.revision != shownRevision || prefs.connected != shownConnected) rebuildLists()
             handler.postDelayed(this, 2000)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = Prefs(this)
 
-        etUrl = findViewById(R.id.etUrl)
-        etKey = findViewById(R.id.etKey)
-        etDb = findViewById(R.id.etDb)
-        tvStatus = findViewById(R.id.tvStatus)
-        tvKeys = findViewById(R.id.tvKeys)
-        etUrl.setText(prefs.serverUrl)
-        etKey.setText(prefs.apiKey)
-        etDb.setText(prefs.database)
+        root = findViewById(R.id.root)
+        tvGreeting = findViewById(R.id.tvGreeting)
+        dotStatus = findViewById(R.id.dotStatus)
+        tvPill = findViewById(R.id.tvPill)
+        tvHeroTitle = findViewById(R.id.tvHeroTitle)
+        tvHeroSubtitle = findViewById(R.id.tvHeroSubtitle)
+        tvHeroNote = findViewById(R.id.tvHeroNote)
+        statsRow = findViewById(R.id.statsRow)
+        btnSetup = findViewById(R.id.btnSetup)
+        tvStatPos = findViewById(R.id.tvStatPos)
+        tvStatProfiles = findViewById(R.id.tvStatProfiles)
+        tvStatToday = findViewById(R.id.tvStatToday)
+        tvCountPos = findViewById(R.id.tvCountPos)
+        tvCountProfiles = findViewById(R.id.tvCountProfiles)
+        listPos = findViewById(R.id.listPos)
+        listProfiles = findViewById(R.id.listProfiles)
+        listActivity = findViewById(R.id.listActivity)
+        cardActivity = findViewById(R.id.cardActivity)
+        emptyPos = findViewById(R.id.emptyPos)
+        emptyProfiles = findViewById(R.id.emptyProfiles)
+        emptyActivity = findViewById(R.id.emptyActivity)
 
-        findViewById<Button>(R.id.btnConnect).setOnClickListener { connect() }
-        findViewById<Button>(R.id.btnDisconnect).setOnClickListener { disconnect() }
-        findViewById<Button>(R.id.btnBattery).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        }
+        findViewById<View>(R.id.hero).clipToOutline = true
+
+        val openSettings = View.OnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        findViewById<View>(R.id.btnSettings).setOnClickListener(openSettings)
+        btnSetup.setOnClickListener(openSettings)
 
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -62,6 +104,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        tvGreeting.text = Ui.greeting()
+        rebuildLists()
         handler.post(ticker)
     }
 
@@ -74,56 +118,201 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.startForegroundService(this, Intent(this, PollService::class.java))
     }
 
-    private fun connect() {
-        val url = etUrl.text.toString().trim().trimEnd('/')
-        val key = etKey.text.toString().trim()
-        if (!(url.startsWith("http://") || url.startsWith("https://")) || key.isEmpty()) {
-            Toast.makeText(this, "Enter the Odoo URL (http:// or https://) and the API key", Toast.LENGTH_LONG).show()
+    // ---------------------------------------------------------------- hero
+
+    private fun setPill(text: String, dotColor: Int) {
+        tvPill.text = text
+        Ui.tint(dotStatus, getColor(dotColor))
+    }
+
+    private fun refreshStatus() {
+        if (!prefs.connected) {
+            setPill("Not connected", R.color.dot_idle)
+            tvHeroTitle.text = "Link this phone to Odoo"
+            tvHeroSubtitle.text = "A one-time setup. After that, POS login requests arrive here automatically."
+            tvHeroNote.isVisible = false
+            statsRow.isVisible = false
+            btnSetup.isVisible = true
             return
         }
-        prefs.serverUrl = url
-        prefs.apiKey = key
-        prefs.database = etDb.text.toString()
-        tvStatus.text = "Connecting…"
-        Thread {
-            try {
-                val res = Api.call(prefs, "/pos_fp/app/ping")
-                runOnUiThread {
-                    if (res.optBoolean("ok", false)) {
-                        Toast.makeText(this, "Connected as " + res.optString("name"), Toast.LENGTH_SHORT).show()
-                        startPolling()
-                    } else {
-                        prefs.clearConnection()
-                        tvStatus.text = res.optString("error", "Connection refused")
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    prefs.clearConnection()
-                    tvStatus.text = "Could not connect: " + (e.message ?: "unknown error")
-                }
+        statsRow.isVisible = true
+        btnSetup.isVisible = false
+        tvHeroTitle.text = prefs.deviceName.ifEmpty { "This phone" }
+        tvHeroSubtitle.text = if (prefs.database.isEmpty()) prefs.host else "${prefs.host}, database ${prefs.database}"
+        when {
+            RequestState.online -> {
+                setPill("Online, waiting for requests", R.color.dot_online)
+                tvHeroNote.isVisible = false
             }
-        }.start()
+            RequestState.lastError.isNotEmpty() -> {
+                setPill("Offline", R.color.dot_offline)
+                tvHeroNote.text = RequestState.lastError
+                tvHeroNote.isVisible = true
+            }
+            else -> {
+                setPill("Connecting…", R.color.dot_idle)
+                tvHeroNote.isVisible = false
+            }
+        }
     }
 
-    private fun disconnect() {
-        stopService(Intent(this, PollService::class.java))
-        prefs.clearConnection()
-        etKey.setText("")
-        refresh()
+    // ---------------------------------------------------------------- lists
+
+    private fun rebuildLists() {
+        shownRevision = prefs.revision
+        shownConnected = prefs.connected
+        val inflater = LayoutInflater.from(this)
+        val terminals = prefs.terminals()
+        val profiles = prefs.profiles()
+        val events = prefs.events(8)
+
+        tvStatPos.text = terminals.size.toString()
+        tvStatProfiles.text = profiles.size.toString()
+        tvStatToday.text = prefs.approvalsToday().toString()
+        tvCountPos.text = terminals.size.toString()
+        tvCountProfiles.text = profiles.size.toString()
+
+        // POS terminals
+        listPos.removeAllViews()
+        terminals.forEach { listPos.addView(terminalView(inflater, it)) }
+        emptyPos.isVisible = terminals.isEmpty()
+        setEmpty(
+            emptyPos, R.drawable.ic_store, "No POS terminals yet",
+            "They appear here after the first fingerprint login on a POS."
+        )
+
+        // Fingerprints
+        listProfiles.removeAllViews()
+        profiles.forEach { listProfiles.addView(profileView(inflater, it)) }
+        emptyProfiles.isVisible = profiles.isEmpty()
+        if (prefs.connected) {
+            setEmpty(
+                emptyProfiles, R.drawable.ic_fingerprint, "No fingerprints yet",
+                "In Odoo open the employee, go to the Fingerprint tab and pick this phone."
+            )
+        } else {
+            setEmpty(
+                emptyProfiles, R.drawable.ic_link, "Connect first",
+                "Link this phone to Odoo in Settings, then register fingerprints."
+            )
+        }
+
+        // Activity
+        listActivity.removeAllViews()
+        events.forEachIndexed { i, e ->
+            if (i > 0) listActivity.addView(divider())
+            listActivity.addView(eventView(inflater, e))
+        }
+        cardActivity.isVisible = events.isNotEmpty()
+        emptyActivity.isVisible = events.isEmpty()
+        setEmpty(emptyActivity, R.drawable.ic_history, "Nothing yet", "Approvals and registrations will be listed here.")
     }
 
-    private fun refresh() {
-        tvStatus.text = when {
-            !prefs.connected -> "Not connected"
-            RequestState.online -> "● Online - waiting for requests"
-            RequestState.lastError.isNotEmpty() -> "○ Offline: " + RequestState.lastError
-            else -> "○ Connecting…"
+    private fun setEmpty(view: View, icon: Int, title: String, subtitle: String) {
+        view.findViewById<ImageView>(R.id.emptyIcon).setImageResource(icon)
+        view.findViewById<TextView>(R.id.emptyTitle).text = title
+        view.findViewById<TextView>(R.id.emptySubtitle).text = subtitle
+    }
+
+    private fun terminalView(inflater: LayoutInflater, t: Prefs.Terminal): View {
+        val v = inflater.inflate(R.layout.item_pos, listPos, false)
+        v.findViewById<TextView>(R.id.tvPosName).text = t.name
+        v.findViewById<TextView>(R.id.tvPosMeta).text =
+            if (t.lastEmployee.isEmpty()) "Last login ${Ui.ago(t.lastUsed)}"
+            else "${t.lastEmployee}, ${Ui.ago(t.lastUsed)}"
+        v.findViewById<TextView>(R.id.tvPosCount).text = t.logins.toString()
+        v.findViewById<TextView>(R.id.tvPosCountLabel).text = if (t.logins == 1) "login" else "logins"
+        return v
+    }
+
+    private fun profileView(inflater: LayoutInflater, p: Prefs.Profile): View {
+        val v = inflater.inflate(R.layout.item_profile, listProfiles, false)
+        val display = p.name.ifEmpty { "Fingerprint …" + p.alias.takeLast(4) }
+
+        v.findViewById<TextView>(R.id.tvAvatar).apply {
+            text = Ui.initials(p.name)
+            Ui.tint(this, Ui.avatarColor(p.alias))
         }
-        tvKeys.text = try {
-            "Fingerprints registered on this phone: " + KeyStoreHelper.aliases().size
-        } catch (e: Exception) {
-            ""
+        v.findViewById<TextView>(R.id.tvName).text = display
+        v.findViewById<TextView>(R.id.tvMeta).text = when {
+            p.lastUsed > 0 -> "Last login ${Ui.ago(p.lastUsed)}, ${p.uses} in total"
+            p.createdAt > 0 -> "Registered ${Ui.ago(p.createdAt)}, not used yet"
+            else -> "Ready on this phone"
         }
+
+        val tags = v.findViewById<LinearLayout>(R.id.posTags)
+        v.findViewById<View>(R.id.posTagsScroll).isVisible = p.terminals.isNotEmpty()
+        p.terminals.forEach { tags.addView(tag(it)) }
+
+        v.findViewById<View>(R.id.btnMore).setOnClickListener { anchor ->
+            PopupMenu(this, anchor).apply {
+                menu.add("Remove from this phone")
+                setOnMenuItemClickListener {
+                    confirmRemove(p.alias, display)
+                    true
+                }
+                show()
+            }
+        }
+        return v
+    }
+
+    private fun tag(text: String): TextView = TextView(this).apply {
+        this.text = text
+        setTextAppearance(R.style.Text_Badge)
+        setTextColor(getColor(R.color.on_primary_container))
+        setBackgroundResource(R.drawable.bg_pill)
+        Ui.tint(this, getColor(R.color.primary_container))
+        val h = Ui.dp(this, 10)
+        val vpad = Ui.dp(this, 4)
+        val gap = Ui.dp(this, 6)
+        setPadding(h, vpad, h, vpad)
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { marginEnd = gap }
+    }
+
+    private fun eventView(inflater: LayoutInflater, e: Prefs.Event): View {
+        val v = inflater.inflate(R.layout.item_activity, listActivity, false)
+        val (icon, fg, bg) = when (e.type) {
+            Prefs.EV_LOGIN -> Triple(R.drawable.ic_check, R.color.success, R.color.success_container)
+            Prefs.EV_REGISTER -> Triple(R.drawable.ic_fingerprint, R.color.on_primary_container, R.color.primary_container)
+            Prefs.EV_REJECT -> Triple(R.drawable.ic_close, R.color.error, R.color.error_container)
+            Prefs.EV_FAILED -> Triple(R.drawable.ic_error, R.color.warning, R.color.warning_container)
+            else -> Triple(R.drawable.ic_delete, R.color.text_secondary, R.color.surface_alt)
+        }
+        Ui.tint(v.findViewById(R.id.actIconBg), getColor(bg))
+        v.findViewById<ImageView>(R.id.actIcon).apply {
+            setImageResource(icon)
+            setColorFilter(getColor(fg))
+        }
+        v.findViewById<TextView>(R.id.actTitle).text = e.title
+        v.findViewById<TextView>(R.id.actDetail).text = e.detail
+        v.findViewById<TextView>(R.id.actTime).text = Ui.ago(e.time)
+        return v
+    }
+
+    private fun divider(): View = View(this).apply {
+        setBackgroundColor(getColor(R.color.divider))
+        val inset = Ui.dp(this, 64)
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 1)).apply {
+            marginStart = inset
+        }
+    }
+
+    private fun confirmRemove(alias: String, name: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Remove $name?")
+            .setMessage(
+                "The fingerprint key is deleted from this phone, so it can no longer approve POS logins. " +
+                    "To use it again, configure the fingerprint from the employee in Odoo."
+            )
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Remove") { _, _ ->
+                prefs.removeProfile(alias)
+                rebuildLists()
+                Snackbar.make(root, "$name removed from this phone", Snackbar.LENGTH_SHORT).show()
+            }
+            .show()
     }
 }

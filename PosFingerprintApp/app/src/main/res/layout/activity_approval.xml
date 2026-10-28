@@ -1,44 +1,181 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="28dp">
+    android:background="@color/bg"
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="24sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tvDetail"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:textSize="18sp" />
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:textColor="#B00020" />
-
-    <Button
-        android:id="@+id/btnScan"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Scan fingerprint" />
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="20dp">
 
-    <Button
-        android:id="@+id/btnCancel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Reject" />
-</LinearLayout>
+        <!-- Brand bar -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/logo_mark" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/plex_semibold"
+                android:text="@string/app_name"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="16dp" />
+
+        <!-- Scanner -->
+        <FrameLayout
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_gravity="center_horizontal">
+
+            <View
+                android:id="@+id/ringOuter"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_gravity="center"
+                android:alpha="0"
+                android:background="@drawable/bg_ring" />
+
+            <View
+                android:id="@+id/ringInner"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_gravity="center"
+                android:alpha="0"
+                android:background="@drawable/bg_ring" />
+
+            <FrameLayout
+                android:id="@+id/fpCircle"
+                android:layout_width="124dp"
+                android:layout_height="124dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_fp_circle"
+                android:elevation="8dp">
+
+                <ImageView
+                    android:id="@+id/ivFp"
+                    android:layout_width="62dp"
+                    android:layout_height="62dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_fingerprint"
+                    app:tint="@color/white" />
+            </FrameLayout>
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tvKind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_pill"
+            android:backgroundTint="@color/primary_container"
+            android:paddingStart="12dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="4dp"
+            android:textAppearance="@style/Text.Badge"
+            android:textColor="@color/on_primary_container" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center"
+            android:textAppearance="@style/Text.Display" />
+
+        <TextView
+            android:id="@+id/tvDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textAppearance="@style/Text.Body" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="18dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="18dp"
+                android:paddingBottom="4dp">
+
+                <include android:id="@+id/rowEmployee" layout="@layout/view_detail_row" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                <include android:id="@+id/rowTarget" layout="@layout/view_detail_row" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                <include android:id="@+id/rowServer" layout="@layout/view_detail_row" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                <include android:id="@+id/rowTime" layout="@layout/view_detail_row" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:minHeight="20dp"
+            android:textAppearance="@style/Text.Meta"
+            android:textSize="14sp" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scan fingerprint"
+            app:icon="@drawable/ic_fingerprint"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Reject"
+            android:textColor="@color/error" />
+    </LinearLayout>
+</ScrollView>

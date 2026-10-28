@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">POS Fingerprint</string>
+    <string name="tagline">Fingerprint sign-in for your Odoo POS</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_more">More options</string>
+    <string name="cd_back">Back</string>
 </resources>

@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationContentDescription="@string/cd_back"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@color/text_primary"
+        app:title="Settings" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="36dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="Odoo connection"
+                android:textAppearance="@style/Text.Section" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <FrameLayout
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/bg_icon_tile"
+                            android:backgroundTint="@color/primary_container">
+
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_dns"
+                                app:tint="@color/on_primary_container" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Odoo server"
+                                android:textAppearance="@style/Text.ItemTitle" />
+
+                            <TextView
+                                android:id="@+id/tvConnState"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="@style/Text.Meta" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvConnBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill"
+                            android:paddingStart="10dp"
+                            android:paddingTop="3dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="3dp"
+                            android:textAppearance="@style/Text.Badge" />
+                    </LinearLayout>
+
+                    <!-- Shown until the phone is linked -->
+                    <LinearLayout
+                        android:id="@+id/formConnect"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="You only do this once. In Odoo, open Point of Sale › Fingerprint App Keys, create a key for this phone and paste it below."
+                            android:textAppearance="@style/Text.Body"
+                            android:textSize="14sp" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilUrl"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:hint="Odoo address"
+                            app:helperText="For example https://erp.company.com"
+                            app:startIconDrawable="@drawable/ic_link">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etUrl"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext"
+                                android:inputType="textUri"
+                                android:singleLine="true" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilKey"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:hint="API key"
+                            app:endIconMode="password_toggle"
+                            app:startIconDrawable="@drawable/ic_key">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etKey"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext"
+                                android:inputType="textPassword"
+                                android:singleLine="true" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilDb"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:hint="Database (optional)"
+                            app:helperText="Only needed if the server hosts several databases"
+                            app:startIconDrawable="@drawable/ic_dns">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etDb"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionDone"
+                                android:inputType="text"
+                                android:singleLine="true" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            android:id="@+id/tvConnError"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_icon_tile"
+                            android:backgroundTint="@color/error_container"
+                            android:padding="12dp"
+                            android:textAppearance="@style/Text.Meta"
+                            android:textColor="@color/error"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/progress"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:indeterminate="true"
+                            android:visibility="gone"
+                            app:trackCornerRadius="4dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnConnect"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="Connect this phone" />
+                    </LinearLayout>
+
+                    <!-- Shown once linked -->
+                    <LinearLayout
+                        android:id="@+id/panelConnected"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <include android:id="@+id/rowServer" layout="@layout/view_detail_row" />
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                        <include android:id="@+id/rowDevice" layout="@layout/view_detail_row" />
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                        <include android:id="@+id/rowDb" layout="@layout/view_detail_row" />
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                        <include android:id="@+id/rowSince" layout="@layout/view_detail_row" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnTest"
+                                style="@style/Widget.App.Button.Outlined"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:text="Test"
+                                app:icon="@drawable/ic_refresh"
+                                app:iconTint="@color/text_primary" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDisconnect"
+                                style="@style/Widget.App.Button.Outlined"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:text="Disconnect"
+                                android:textColor="@color/error"
+                                app:icon="@drawable/ic_logout"
+                                app:iconTint="@color/error" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="4dp"
+                android:text="Receiving requests"
+                android:textAppearance="@style/Text.Section" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="Turn these on so login requests reach you even when the app is closed."
+                android:textAppearance="@style/Text.Meta" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include android:id="@+id/rowNotif" layout="@layout/view_setting_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowBattery" layout="@layout/view_setting_row" />
+                    <View android:id="@+id/divFullScreen" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowFullScreen" layout="@layout/view_setting_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowBiometric" layout="@layout/view_setting_row" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="10dp"
+                android:text="Data on this phone"
+                android:textAppearance="@style/Text.Section" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include android:id="@+id/rowKeys" layout="@layout/view_setting_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowHistory" layout="@layout/view_setting_row" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:layout_marginBottom="10dp"
+                android:text="About"
+                android:textAppearance="@style/Text.Section" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include android:id="@+id/rowHelp" layout="@layout/view_setting_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowVersion" layout="@layout/view_setting_row" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>
