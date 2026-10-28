@@ -25,7 +25,6 @@ import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import java.net.URI
 import java.util.Date
 
 /** Settings: the one-time Odoo connection, background reliability and local data. */
@@ -57,11 +56,13 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var rowBiometric: View
     private lateinit var rowKeys: View
     private lateinit var rowHistory: View
+    private lateinit var rowErase: View
     private lateinit var rowHelp: View
     private lateinit var rowVersion: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Security.protect(this)
         setContentView(R.layout.activity_settings)
         prefs = Prefs(this)
 
@@ -98,6 +99,7 @@ class SettingsActivity : AppCompatActivity() {
         rowBiometric = findViewById(R.id.rowBiometric)
         rowKeys = findViewById(R.id.rowKeys)
         rowHistory = findViewById(R.id.rowHistory)
+        rowErase = findViewById(R.id.rowErase)
         rowHelp = findViewById(R.id.rowHelp)
         rowVersion = findViewById(R.id.rowVersion)
 
@@ -135,6 +137,10 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .show()
         }
+        setupRow(rowErase, R.drawable.ic_delete, "Erase all data", "Remove the connection, fingerprints and history") {
+            confirmErase()
+        }
+        rowErase.findViewById<TextView>(R.id.rowTitle).setTextColor(getColor(R.color.error))
         setupRow(rowHelp, R.drawable.ic_info, "How it works", "Pairing, registering and approving logins") { showHelp() }
         setupRow(rowVersion, R.drawable.ic_shield, "Version", "POS Fingerprint for Odoo", null)
     }
@@ -161,6 +167,15 @@ class SettingsActivity : AppCompatActivity() {
                 R.id.rowSince, "Connected since",
                 if (prefs.connectedAt > 0) DateFormat.getMediumDateFormat(this).format(Date(prefs.connectedAt)) else "Before version 2.0"
             )
+            if (Security.isEncrypted(prefs.serverUrl)) {
+                detail(R.id.rowEncryption, "Connection", "Encrypted (HTTPS)")
+                findViewById<View>(R.id.rowEncryption).findViewById<TextView>(R.id.detailValue)
+                    .setTextColor(getColor(R.color.success))
+            } else {
+                detail(R.id.rowEncryption, "Connection", "Not encrypted (local network)")
+                findViewById<View>(R.id.rowEncryption).findViewById<TextView>(R.id.detailValue)
+                    .setTextColor(getColor(R.color.warning))
+            }
         } else {
             tvConnState.text = "Not linked yet"
             badge(tvConnBadge, "Not connected", Tone.WARN)
@@ -249,23 +264,38 @@ class SettingsActivity : AppCompatActivity() {
         val db = etDb.text?.toString().orEmpty().trim()
 
         var valid = true
-        val host = try {
-            URI(url).host
-        } catch (_: Exception) {
-            null
-        }
-        if (url.isEmpty() || host.isNullOrEmpty()) {
-            tilUrl.error = "Enter the address you use to open Odoo"
+        val problem = if (url.isEmpty()) "Enter the address you use to open Odoo" else Security.addressProblem(url)
+        if (problem != null) {
+            tilUrl.error = problem
             valid = false
         }
         if (key.isEmpty()) {
             tilKey.error = "Paste the API key generated in Odoo"
+            valid = false
+        } else if (key.length < 8 || key.length > 512 || key.any { it.isWhitespace() }) {
+            tilKey.error = "This doesn't look like an Odoo API key. Copy it again from Odoo."
             valid = false
         }
         if (!valid) return
 
         etUrl.setText(url)
         hideKeyboard()
+        if (!Security.isEncrypted(url)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Connection won't be encrypted")
+                .setMessage(
+                    "This address uses http://, so anyone on the same Wi-Fi could read the API key. " +
+                        "Use an https:// address if your Odoo has one. Continue only on a trusted private network."
+                )
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Continue anyway") { _, _ -> doConnect(url, key, db) }
+                .show()
+            return
+        }
+        doConnect(url, key, db)
+    }
+
+    private fun doConnect(url: String, key: String, db: String) {
         setBusy(true)
 
         prefs.serverUrl = url
@@ -362,6 +392,30 @@ class SettingsActivity : AppCompatActivity() {
                 etDb.setText("")
                 render()
                 Snackbar.make(root, "Disconnected", Snackbar.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun confirmErase() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Erase all data?")
+            .setMessage(
+                "This disconnects the phone, deletes every fingerprint key stored on it, and clears the " +
+                    "POS list and history. Employees will need to configure their fingerprint again from Odoo. " +
+                    "This can't be undone."
+            )
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Erase") { _, _ ->
+                stopService(Intent(this, PollService::class.java))
+                RequestState.online = false
+                RequestState.lastError = ""
+                RequestState.handled.clear()
+                prefs.eraseAll()
+                etUrl.setText("")
+                etKey.setText("")
+                etDb.setText("")
+                render()
+                Snackbar.make(root, "All data erased from this phone", Snackbar.LENGTH_LONG).show()
             }
             .show()
     }

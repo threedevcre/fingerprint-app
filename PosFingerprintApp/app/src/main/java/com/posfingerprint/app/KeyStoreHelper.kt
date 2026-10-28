@@ -21,18 +21,40 @@ object KeyStoreHelper {
 
     fun aliases(): List<String> = ks().aliases().toList().filter { it.startsWith(PREFIX) }
 
+    /**
+     * Creates a P-256 signing key that:
+     * - can only be used right after a strong biometric scan (timeout 0 = every signature),
+     * - is destroyed if a new fingerprint is enrolled on the phone,
+     * - lives in the StrongBox security chip when the phone has one.
+     */
     fun createKey(): String {
         val alias = PREFIX + UUID.randomUUID().toString().replace("-", "")
-        val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN)
+        fun spec(strongBox: Boolean) = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN)
             .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
             .setDigests(KeyProperties.DIGEST_SHA256)
             .setUserAuthenticationRequired(true)
             .setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
+            .setInvalidatedByBiometricEnrollment(true)
+            .setIsStrongBoxBacked(strongBox)
             .build()
-        KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
-            .apply { initialize(spec) }
-            .generateKeyPair()
+        val gen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
+        try {
+            gen.initialize(spec(true))
+            gen.generateKeyPair()
+        } catch (_: Exception) {
+            delete(alias)
+            gen.initialize(spec(false))
+            gen.generateKeyPair()
+        }
         return alias
+    }
+
+    /** Deletes every fingerprint key this app created. */
+    fun deleteAll() {
+        try {
+            aliases().forEach { delete(it) }
+        } catch (_: Exception) {
+        }
     }
 
     fun publicKeyB64(alias: String): String =

@@ -21,9 +21,38 @@ class Prefs(context: Context) {
         get() = sp.getString("url", "") ?: ""
         set(v) = sp.edit().putString("url", v.trim().trimEnd('/')).apply()
 
+    /**
+     * The Odoo API key, encrypted at rest with a hardware-backed key (see SecureStore).
+     * Keys saved in plain text by version 1.0 are encrypted the first time they are read.
+     */
     var apiKey: String
-        get() = sp.getString("key", "") ?: ""
-        set(v) = sp.edit().putString("key", v.trim()).apply()
+        get() {
+            cachedKey?.let { return it }
+            val raw = sp.getString("key", "") ?: ""
+            if (raw.isEmpty()) return ""
+            val plain = if (SecureStore.isEncrypted(raw)) {
+                SecureStore.decrypt(raw) ?: ""
+            } else {
+                // Migrate a 1.0 plain-text key.
+                try {
+                    sp.edit().putString("key", SecureStore.encrypt(raw)).commit()
+                } catch (_: Exception) {
+                }
+                raw
+            }
+            if (plain.isNotEmpty()) cachedKey = plain
+            return plain
+        }
+        set(v) {
+            val t = v.trim()
+            cachedKey = null
+            if (t.isEmpty()) {
+                sp.edit().remove("key").commit()
+            } else {
+                sp.edit().putString("key", SecureStore.encrypt(t)).commit()
+                cachedKey = t
+            }
+        }
 
     var database: String
         get() = sp.getString("db", "") ?: ""
@@ -49,7 +78,17 @@ class Prefs(context: Context) {
         }
 
     fun clearConnection() {
-        sp.edit().remove("url").remove("key").remove("db").remove("device").remove("since").apply()
+        cachedKey = null
+        sp.edit().remove("url").remove("key").remove("db").remove("device").remove("since").commit()
+        bump()
+    }
+
+    /** Wipes everything: connection, encrypted key, fingerprint keys, history and terminals. */
+    fun eraseAll() {
+        cachedKey = null
+        KeyStoreHelper.deleteAll()
+        SecureStore.deleteKey()
+        sp.edit().clear().commit()
         bump()
     }
 
@@ -233,5 +272,9 @@ class Prefs(context: Context) {
         const val DEFAULT_POS = "Point of Sale"
         private const val MAX_EVENTS = 50
         private val LOCK = Any()
+
+        /** Decrypted API key kept in memory only, so the keystore isn't hit on every poll. */
+        @Volatile
+        private var cachedKey: String? = null
     }
 }

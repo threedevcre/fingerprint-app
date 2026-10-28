@@ -81,8 +81,10 @@ class PollService : Service() {
                             lastToken = ""
                         }
                     } else {
-                        val token = req.getString("token")
-                        if (token != lastToken && token !in RequestState.handled && isForThisPhone(req)) {
+                        val token = req.optString("token")
+                        if (Security.isValidRequest(req) &&
+                            token != lastToken && token !in RequestState.handled && isForThisPhone(req)
+                        ) {
                             lastToken = token
                             notifyRequest(req)
                         }
@@ -120,6 +122,7 @@ class PollService : Service() {
         }
         val intent = Intent(this, ApprovalActivity::class.java)
             .putExtra("request", req.toString())
+            .putExtra("received_at", System.currentTimeMillis())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pi = PendingIntent.getActivity(
             this, req.getString("token").hashCode(), intent,
@@ -136,6 +139,16 @@ class PollService : Service() {
             .setContentIntent(pi)
             .setFullScreenIntent(pi, true)
             .setTimeoutAfter(90_000)
+            // On the lock screen show only a generic line, never employee or POS names.
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(
+                NotificationCompat.Builder(this, CH_REQUESTS)
+                    .setSmallIcon(R.drawable.ic_stat_fingerprint)
+                    .setColor(getColor(R.color.signal))
+                    .setContentTitle("Fingerprint request")
+                    .setContentText("Unlock or tap to review")
+                    .build()
+            )
             .build()
         getSystemService(NotificationManager::class.java).notify(REQUEST_ID, n)
     }

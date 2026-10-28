@@ -50,6 +50,8 @@ class ApprovalActivity : AppCompatActivity() {
     private var posName = ""
     private var promptSubtitle = ""
     private var busy = false
+    private var expired = false
+    private var receivedAt = 0L
     private var pulse: AnimatorSet? = null
     private val handler = Handler(Looper.getMainLooper())
 
@@ -57,6 +59,7 @@ class ApprovalActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Security.protect(this)
         setContentView(R.layout.activity_approval)
         prefs = Prefs(this)
 
@@ -98,7 +101,18 @@ class ApprovalActivity : AppCompatActivity() {
             finish()
             return
         }
-        req = JSONObject(raw)
+        val parsed = try {
+            JSONObject(raw)
+        } catch (_: Exception) {
+            null
+        }
+        if (parsed == null || !Security.isValidRequest(parsed)) {
+            finish()
+            return
+        }
+        req = parsed
+        receivedAt = intent.getLongExtra("received_at", System.currentTimeMillis())
+        expired = false
         kind = req.getString("kind")
         token = req.getString("token")
         challenge = req.getString("challenge")
@@ -235,8 +249,26 @@ class ApprovalActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- fingerprint flow
 
+    private fun isTooOld(): Boolean =
+        System.currentTimeMillis() - receivedAt > Security.REQUEST_MAX_AGE_MS
+
+    private fun showExpired() {
+        expired = true
+        busy = false
+        stopPulse()
+        setCircle(getColor(R.color.text_tertiary), R.drawable.ic_history)
+        tvStatus.setTextColor(getColor(R.color.text_secondary))
+        tvStatus.text = "This request expired. Start a new one from the POS or Odoo."
+        btnScan.isVisible = false
+        btnCancel.text = "Close"
+    }
+
     private fun begin() {
-        if (busy) return
+        if (busy || expired) return
+        if (isTooOld()) {
+            showExpired()
+            return
+        }
         val can = BiometricManager.from(this)
             .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
         if (can != BiometricManager.BIOMETRIC_SUCCESS) {
@@ -285,6 +317,11 @@ class ApprovalActivity : AppCompatActivity() {
                     if (sig == null) {
                         if (isNew) KeyStoreHelper.delete(alias)
                         fail("The fingerprint check didn't complete. Try again.")
+                        return
+                    }
+                    if (isTooOld()) {
+                        if (isNew) KeyStoreHelper.delete(alias)
+                        showExpired()
                         return
                     }
                     try {
@@ -365,6 +402,11 @@ class ApprovalActivity : AppCompatActivity() {
     }
 
     private fun reject() {
+        if (expired) {
+            RequestState.handled.add(token)
+            finish()
+            return
+        }
         RequestState.handled.add(token)
         prefs.recordRejected(isRegister, if (isRegister) employee.ifEmpty { "Employee" } else posName)
         if (isRegister) {

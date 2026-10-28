@@ -146,6 +146,8 @@
                                 android:id="@+id/etKey"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:importantForAutofill="no"
+                                android:longClickable="true"
                                 android:imeOptions="actionNext"
                                 android:inputType="textPassword"
                                 android:singleLine="true" />
@@ -192,6 +194,7 @@
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnConnect"
+                            android:filterTouchesWhenObscured="true"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
@@ -214,6 +217,8 @@
                         <include android:id="@+id/rowDb" layout="@layout/view_detail_row" />
                         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
                         <include android:id="@+id/rowSince" layout="@layout/view_detail_row" />
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" />
+                        <include android:id="@+id/rowEncryption" layout="@layout/view_detail_row" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -234,6 +239,7 @@
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnDisconnect"
+                                android:filterTouchesWhenObscured="true"
                                 style="@style/Widget.App.Button.Outlined"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -302,6 +308,8 @@
                     <include android:id="@+id/rowKeys" layout="@layout/view_setting_row" />
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
                     <include android:id="@+id/rowHistory" layout="@layout/view_setting_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="70dp" android:background="@color/divider" />
+                    <include android:id="@+id/rowErase" layout="@layout/view_setting_row" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

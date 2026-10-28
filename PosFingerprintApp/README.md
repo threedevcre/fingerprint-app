@@ -1,4 +1,4 @@
-# POS Fingerprint (Android) — v2.0
+# POS Fingerprint (Android) — v2.1
 
 Companion app for the Odoo module `pos_fingerprint_login`.
 
@@ -12,6 +12,47 @@ Companion app for the Odoo module `pos_fingerprint_login`.
 - Redesigned approval screen with a clear scan, success and error state.
 
 Data from version 1.0 (connection and fingerprint names) carries over automatically.
+
+## Security (v2.1)
+
+### What the app does
+- **Fingerprint keys** are P-256 keys in the Android Keystore (StrongBox chip when available). Every
+  signature needs a fresh strong-biometric scan. Keys are destroyed if a new fingerprint is enrolled,
+  and the private key can never be exported. Odoo only ever receives a signature and a public key.
+- **API key** is encrypted at rest with AES-256-GCM using a hardware-backed key. 1.0 plain-text keys
+  are migrated automatically on first launch.
+- **Transport:** https:// is required for every public address. http:// is accepted only for literal
+  local-network addresses (10.x, 172.16–31.x, 192.168.x, localhost, *.local), after a warning, and
+  Settings marks such a connection as "Not encrypted". Only system certificate authorities are
+  trusted (user-installed or MDM certificates are ignored). Redirects are refused so the key can't
+  be forwarded to another host. Responses are capped at 512 KB.
+- **Requests** from the server are validated (type, token/challenge format, field sizes) before a
+  notification or signature. An approval screen expires after 2 minutes.
+- **Screens** block screenshots, screen recording and the recent-apps preview, hide overlay apps
+  (Android 12+) and ignore taps while another app draws on top.
+- **Lock screen** notifications show only "Fingerprint request", never employee or POS names.
+- **No data leaves the phone** through cloud backup or device-to-device transfer.
+- **Erase all data** in Settings deletes the connection, the encrypted key, all fingerprint keys
+  and the history.
+
+### Production builds — important
+Debug APKs are debuggable, which lets anyone with USB access read app data. **Give cashiers only the
+signed release APK.** One-time setup:
+1. Create a signing key (keep it safe and backed up; you need the same key for every update):
+   `keytool -genkeypair -v -keystore release.jks -alias posfp -keyalg RSA -keysize 4096 -validity 10000`
+2. In GitHub: Settings › Secrets and variables › Actions, add
+   `POSFP_KEYSTORE_BASE64` (output of `base64 -w0 release.jks`), `POSFP_KEYSTORE_PASSWORD`,
+   `POSFP_KEY_ALIAS` (`posfp`), `POSFP_KEY_PASSWORD`.
+3. Push. Download `pos-fingerprint-release-apk` from the run's Artifacts.
+Without these secrets the workflow builds `pos-fingerprint-DEBUG-testing-only`, for testing only.
+
+### Must be enforced by the Odoo module (the app can't do this)
+The server decides who gets logged in, so these checks belong there:
+- Verify the ECDSA signature over `kind:token:challenge` with the stored public key, every time.
+- Challenges are random (≥128 bits), single-use, and expire within ~60–120 seconds.
+- Bind each challenge to the POS session that requested it, so an approval can't be replayed elsewhere.
+- Store only a hash of each phone's API key, allow revoking it, and rate-limit `/pos_fp/app/*`.
+- Serve Odoo over HTTPS with a valid certificate, and log every approval and rejection.
 
 ## Build
 1. Open this folder in Android Studio (Koala or newer) and let Gradle sync (needs internet once).

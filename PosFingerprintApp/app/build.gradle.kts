@@ -11,13 +11,34 @@ android {
         applicationId = "com.posfingerprint.app"
         minSdk = 30
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 3
+        versionName = "2.1"
+    }
+
+    // Release signing comes from environment variables (set by the GitHub workflow from
+    // repository secrets, or by you locally). Never commit a keystore or its passwords.
+    signingConfigs {
+        create("release") {
+            val ks = System.getenv("POSFP_KEYSTORE")
+            if (!ks.isNullOrEmpty()) {
+                storeFile = file(ks)
+                storePassword = System.getenv("POSFP_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("POSFP_KEY_ALIAS")
+                keyPassword = System.getenv("POSFP_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Release builds are not debuggable, so app data can't be read over USB.
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (!System.getenv("POSFP_KEYSTORE").isNullOrEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

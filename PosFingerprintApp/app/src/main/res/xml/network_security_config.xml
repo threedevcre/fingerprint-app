@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Trust only the phone's built-in certificate authorities: a certificate installed by a user,
+  an MDM profile or a malicious app can't be used to intercept the connection.
+  Cleartext stays technically possible so a local-network Odoo (192.168.x.x) still works,
+  but Security.addressProblem() refuses http:// for any public address, and the user
+  must confirm a warning before using http:// on a local network.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
