@@ -1,6 +1,16 @@
-# POS Fingerprint (Android) — v2.1
+# POS Fingerprint (Android) — v2.2
 
 Companion app for the Odoo module `pos_fingerprint_login`.
+
+## What's new in 2.2
+- **Theme choice in the app:** Settings › Appearance › Theme lets you pick Light, Dark, or match the phone.
+- **No notification while the app is open:** if the app is on screen when a fingerprint request
+  arrives, the scanner opens straight away. When the app is closed or in the background (or the
+  phone is locked) you get the notification as before. If you open the app normally while a request
+  is waiting, the scanner opens automatically.
+- **App logo in notifications:** request and status notifications show the full-colour logo.
+  (The small status-bar icon stays a white fingerprint: Android draws every status-bar icon as a
+  single-colour silhouette.)
 
 ## What's new in 2.0
 - New fingerprint logo (adaptive launcher icon, themed icon on Android 13+, splash screen).

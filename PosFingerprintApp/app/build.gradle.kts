@@ -11,8 +11,8 @@ android {
         applicationId = "com.posfingerprint.app"
         minSdk = 30
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.1"
+        versionCode = 4
+        versionName = "2.2"
     }
 
     // Release signing comes from environment variables (set by the GitHub workflow from

@@ -69,6 +69,11 @@ class Prefs(context: Context) {
 
     val connected: Boolean get() = serverUrl.isNotEmpty() && apiKey.isNotEmpty()
 
+    /** App.THEME_SYSTEM, THEME_LIGHT or THEME_DARK. */
+    var themeMode: Int
+        get() = sp.getInt("theme", App.THEME_SYSTEM)
+        set(v) = sp.edit().putInt("theme", v).apply()
+
     /** "erp.company.com" instead of the full URL, for display. */
     val host: String
         get() = try {

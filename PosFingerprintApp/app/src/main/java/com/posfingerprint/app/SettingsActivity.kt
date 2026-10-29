@@ -57,6 +57,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var rowKeys: View
     private lateinit var rowHistory: View
     private lateinit var rowErase: View
+    private lateinit var rowTheme: View
     private lateinit var rowHelp: View
     private lateinit var rowVersion: View
 
@@ -100,6 +101,7 @@ class SettingsActivity : AppCompatActivity() {
         rowKeys = findViewById(R.id.rowKeys)
         rowHistory = findViewById(R.id.rowHistory)
         rowErase = findViewById(R.id.rowErase)
+        rowTheme = findViewById(R.id.rowTheme)
         rowHelp = findViewById(R.id.rowHelp)
         rowVersion = findViewById(R.id.rowVersion)
 
@@ -137,6 +139,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .show()
         }
+        setupRow(rowTheme, R.drawable.ic_theme, "Theme", "Light, dark, or match the phone") { chooseTheme() }
         setupRow(rowErase, R.drawable.ic_delete, "Erase all data", "Remove the connection, fingerprints and history") {
             confirmErase()
         }
@@ -205,6 +208,7 @@ class SettingsActivity : AppCompatActivity() {
             0
         }
         rowValue(rowKeys, keys.toString(), Tone.NEUTRAL)
+        rowValue(rowTheme, App.themeLabel(prefs.themeMode), Tone.NEUTRAL)
 
         val version = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: ""
@@ -396,6 +400,23 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun chooseTheme() {
+        val modes = intArrayOf(App.THEME_SYSTEM, App.THEME_LIGHT, App.THEME_DARK)
+        val labels = arrayOf("Match phone setting", "Light", "Dark")
+        val current = modes.indexOf(prefs.themeMode).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Theme")
+            .setSingleChoiceItems(labels, current) { dialog, which ->
+                dialog.dismiss()
+                if (modes[which] != prefs.themeMode) {
+                    prefs.themeMode = modes[which]
+                    App.applyTheme(modes[which]) // redraws open screens in the new theme
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun confirmErase() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Erase all data?")
@@ -411,6 +432,8 @@ class SettingsActivity : AppCompatActivity() {
                 RequestState.lastError = ""
                 RequestState.handled.clear()
                 prefs.eraseAll()
+                RequestState.pending = null
+                App.applyTheme(App.THEME_SYSTEM)
                 etUrl.setText("")
                 etKey.setText("")
                 etDb.setText("")

@@ -7,9 +7,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import org.json.JSONObject
 
 /** Keeps the phone "online" in Odoo and raises a notification when a fingerprint request arrives. */
@@ -39,6 +42,7 @@ class PollService : Service() {
         val notification: Notification = NotificationCompat.Builder(this, CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_fingerprint)
             .setColor(getColor(R.color.ink))
+            .setLargeIcon(largeIcon)
             .setContentTitle("Ready for POS logins")
             .setContentText(if (host.isEmpty()) "Waiting for requests" else "Connected to $host")
             .setOngoing(true)
@@ -76,6 +80,7 @@ class PollService : Service() {
                     RequestState.lastError = ""
                     val req = res.optJSONObject("request")
                     if (req == null) {
+                        RequestState.pending = null
                         if (lastToken.isNotEmpty()) {
                             getSystemService(NotificationManager::class.java).cancel(REQUEST_ID)
                             lastToken = ""
@@ -86,7 +91,10 @@ class PollService : Service() {
                             token != lastToken && token !in RequestState.handled && isForThisPhone(req)
                         ) {
                             lastToken = token
-                            notifyRequest(req)
+                            val now = System.currentTimeMillis()
+                            RequestState.pendingAt = now
+                            RequestState.pending = req
+                            deliver(req, now)
                         }
                     }
                 }
@@ -112,7 +120,34 @@ class PollService : Service() {
         return false
     }
 
-    private fun notifyRequest(req: JSONObject) {
+    /**
+     * App on screen: open the scanner straight away, no notification.
+     * App closed or in the background: post the notification (full-screen on the lock screen).
+     */
+    private fun deliver(req: JSONObject, receivedAt: Long) {
+        if (RequestState.inForeground) {
+            val token = req.optString("token")
+            RequestState.autoOpened.add(token)
+            try {
+                startActivity(
+                    App.approvalIntent(this, req, receivedAt)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+                return
+            } catch (_: Exception) {
+                // If Android refuses to open the screen, fall back to the notification.
+                RequestState.autoOpened.remove(token)
+            }
+        }
+        notifyRequest(req, receivedAt)
+    }
+
+    private val largeIcon: Bitmap by lazy {
+        val px = (64 * resources.displayMetrics.density).toInt()
+        ContextCompat.getDrawable(this, R.drawable.logo_mark)!!.toBitmap(px, px)
+    }
+
+    private fun notifyRequest(req: JSONObject, receivedAt: Long) {
         val isRegister = req.getString("kind") == "register"
         val title = if (isRegister) "Register your fingerprint" else "POS login request"
         val text = if (isRegister) {
@@ -122,7 +157,7 @@ class PollService : Service() {
         }
         val intent = Intent(this, ApprovalActivity::class.java)
             .putExtra("request", req.toString())
-            .putExtra("received_at", System.currentTimeMillis())
+            .putExtra("received_at", receivedAt)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pi = PendingIntent.getActivity(
             this, req.getString("token").hashCode(), intent,
@@ -132,6 +167,7 @@ class PollService : Service() {
             .setSmallIcon(R.drawable.ic_stat_fingerprint)
             .setColor(getColor(R.color.signal))
             .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setLargeIcon(largeIcon)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -145,6 +181,7 @@ class PollService : Service() {
                 NotificationCompat.Builder(this, CH_REQUESTS)
                     .setSmallIcon(R.drawable.ic_stat_fingerprint)
                     .setColor(getColor(R.color.signal))
+                    .setLargeIcon(largeIcon)
                     .setContentTitle("Fingerprint request")
                     .setContentText("Unlock or tap to review")
                     .build()
