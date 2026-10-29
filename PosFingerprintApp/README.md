@@ -1,6 +1,17 @@
-# POS Fingerprint (Android) — v2.2
+# POS Fingerprint (Android) — v2.3
 
 Companion app for the Odoo module `pos_fingerprint_login`.
+
+## What's new in 2.3
+- **Odoo sign-ins:** requests from the Odoo login page are shown as "Odoo sign-in request" (globe
+  badge, "Approve Odoo sign-in"), counted in their own **Odoo sign-ins** card on the home screen and
+  no longer listed as a POS terminal. Fingerprint setups for Odoo users say so too.
+- Fingerprints on the home screen are labelled **Odoo user** or **POS cashier**.
+- **Glowing hero fingerprint:** soft light, real blur (Android 12+) and crisp ridges, coloured by
+  status (teal online, amber offline, indigo not connected) and breathing gently while online.
+  It stays still if animations are turned off on the phone.
+- Matching glow behind the scanner on the approval screen; stat icons on the home card.
+- Works with module 19.0.1.1.1 (sends "purpose" and "owner_type"); older modules still work.
 
 ## What's new in 2.2
 - **Theme choice in the app:** Settings › Appearance › Theme lets you pick Light, Dark, or match the phone.

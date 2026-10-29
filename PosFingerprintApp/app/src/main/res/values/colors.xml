@@ -32,4 +32,9 @@
     <color name="dot_idle">#94A3B8</color>
     <color name="hero_glass">#1FFFFFFF</color>
     <color name="hero_text_dim">#B8C3DE</color>
+
+    <!-- Hero fingerprint glow, per status (bright tones that read on the ink card) -->
+    <color name="glow_online">#5EEAD4</color>
+    <color name="glow_offline">#FCD34D</color>
+    <color name="glow_idle">#A5B4FC</color>
 </resources>

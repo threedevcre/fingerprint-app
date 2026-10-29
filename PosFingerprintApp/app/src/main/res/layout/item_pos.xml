@@ -13,12 +13,14 @@
         android:padding="16dp">
 
         <FrameLayout
+            android:id="@+id/posIconBg"
             android:layout_width="46dp"
             android:layout_height="46dp"
             android:background="@drawable/bg_icon_tile"
             android:backgroundTint="@color/primary_container">
 
             <ImageView
+                android:id="@+id/posIcon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_gravity="center"

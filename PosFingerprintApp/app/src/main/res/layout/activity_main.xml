@@ -79,15 +79,40 @@
                 android:background="@drawable/bg_hero"
                 android:elevation="4dp">
 
-                <ImageView
-                    android:layout_width="230dp"
-                    android:layout_height="230dp"
+                <!-- Glowing fingerprint: soft light, blurred ridges (Android 12+), crisp ridges -->
+                <FrameLayout
+                    android:id="@+id/heroGlow"
+                    android:layout_width="250dp"
+                    android:layout_height="250dp"
                     android:layout_gravity="end|top"
-                    android:layout_marginTop="-34dp"
-                    android:layout_marginEnd="-64dp"
-                    android:alpha="0.07"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/hero_ridges" />
+                    android:layout_marginTop="-46dp"
+                    android:layout_marginEnd="-88dp"
+                    android:importantForAccessibility="no">
+
+                    <View
+                        android:id="@+id/heroGlowLight"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/hero_glow_light" />
+
+                    <ImageView
+                        android:id="@+id/heroRidgesBlur"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:alpha="0.9"
+                        android:padding="34dp"
+                        android:src="@drawable/hero_ridges"
+                        app:tint="@color/glow_online" />
+
+                    <ImageView
+                        android:id="@+id/heroRidges"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:alpha="0.42"
+                        android:padding="34dp"
+                        android:src="@drawable/hero_ridges"
+                        app:tint="@color/glow_online" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -179,8 +204,10 @@
                                 android:textSize="24sp" />
 
                             <TextView
+                                android:id="@+id/tvStatPosLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
                                 android:text="Terminals"
                                 android:textAppearance="@style/Text.Meta"
                                 android:textColor="@color/hero_text_dim" />
@@ -207,8 +234,10 @@
                                 android:textSize="24sp" />
 
                             <TextView
+                                android:id="@+id/tvStatProfilesLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
                                 android:text="Fingerprints"
                                 android:textAppearance="@style/Text.Meta"
                                 android:textColor="@color/hero_text_dim" />
@@ -235,9 +264,11 @@
                                 android:textSize="24sp" />
 
                             <TextView
+                                android:id="@+id/tvStatTodayLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Logins today"
+                                android:gravity="center_vertical"
+                                android:text="Today"
                                 android:textAppearance="@style/Text.Meta"
                                 android:textColor="@color/hero_text_dim" />
                         </LinearLayout>
@@ -257,6 +288,29 @@
                         app:iconTint="@color/ink" />
                 </LinearLayout>
             </FrameLayout>
+
+            <!-- Odoo sign-ins (shown once this phone has an Odoo user fingerprint or sign-ins) -->
+            <LinearLayout
+                android:id="@+id/sectionWeb"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Odoo sign-ins"
+                    android:textAppearance="@style/Text.Section" />
+
+                <LinearLayout
+                    android:id="@+id/listWeb"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
 
             <!-- POS terminals -->
             <LinearLayout

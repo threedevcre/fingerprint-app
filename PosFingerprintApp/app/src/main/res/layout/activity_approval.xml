@@ -52,6 +52,16 @@
             android:layout_gravity="center_horizontal">
 
             <View
+                android:id="@+id/scanGlow"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center"
+                android:alpha="0.55"
+                android:background="@drawable/hero_glow_light"
+                android:backgroundTint="@color/signal"
+                android:importantForAccessibility="no" />
+
+            <View
                 android:id="@+id/ringOuter"
                 android:layout_width="200dp"
                 android:layout_height="200dp"
@@ -88,6 +98,7 @@
 
         <TextView
             android:id="@+id/tvKind"
+            android:gravity="center_vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"

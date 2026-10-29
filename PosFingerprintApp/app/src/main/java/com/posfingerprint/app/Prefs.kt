@@ -115,7 +115,13 @@ class Prefs(context: Context) {
         val lastUsed: Long,
         val uses: Int,
         val terminals: List<String>,
+        /** KIND_USER (Odoo user login), KIND_EMPLOYEE (POS cashier) or "" if unknown (older versions). */
+        val kind: String,
+        val webUses: Int,
     )
+
+    /** Odoo web sign-ins approved from this phone. */
+    data class WebStats(val count: Int, val lastAt: Long, val lastUser: String)
 
     data class Terminal(val name: String, val lastUsed: Long, val lastEmployee: String, val logins: Int)
 
@@ -161,22 +167,29 @@ class Prefs(context: Context) {
                 uses = p?.optInt("uses") ?: 0,
                 terminals = if (pos == null) emptyList()
                 else (0 until pos.length()).map { pos.optString(it) }.filter { it.isNotEmpty() },
+                kind = p?.optString("kind").orEmpty(),
+                webUses = p?.optInt("web") ?: 0,
             )
         }.sortedWith(compareByDescending<Profile> { maxOf(it.lastUsed, it.createdAt) }.thenBy { it.name })
     }
 
-    fun recordRegistration(alias: String, employee: String) {
+    fun recordRegistration(alias: String, employee: String, kind: String = "") {
         val all = readObj("profiles")
         all.put(
             alias, JSONObject()
                 .put("name", employee)
+                .put("kind", kind)
                 .put("created", System.currentTimeMillis())
                 .put("last", 0L)
                 .put("uses", 0)
                 .put("pos", JSONArray())
         )
         sp.edit().putString("profiles", all.toString()).apply()
-        addEvent(EV_REGISTER, "Fingerprint registered", employee.ifEmpty { "New profile" })
+        addEvent(
+            EV_REGISTER,
+            if (kind == KIND_USER) "Odoo login set up" else "Fingerprint registered",
+            employee.ifEmpty { "New profile" }
+        )
     }
 
     fun recordLogin(alias: String, posName: String) {
@@ -207,6 +220,30 @@ class Prefs(context: Context) {
             .apply()
         addEvent(EV_LOGIN, "Login approved", "$name on $pos")
     }
+
+    /** An approved Odoo web sign-in. Kept apart from POS terminals. */
+    fun recordWebLogin(alias: String) {
+        val now = System.currentTimeMillis()
+        val name = employeeName(alias).ifEmpty { "User" }
+        val all = readObj("profiles")
+        val p = all.optJSONObject(alias) ?: JSONObject().put("name", name).put("created", 0L)
+        p.put("last", now).put("uses", p.optInt("uses") + 1).put("web", p.optInt("web") + 1)
+        all.put(alias, p)
+        val today = dayKey()
+        val count = if (sp.getString("today", "") == today) sp.getInt("today_n", 0) else 0
+        sp.edit()
+            .putString("profiles", all.toString())
+            .putInt("web_n", sp.getInt("web_n", 0) + 1)
+            .putLong("web_last", now)
+            .putString("web_user", name)
+            .putString("today", today)
+            .putInt("today_n", count + 1)
+            .apply()
+        addEvent(EV_WEB_LOGIN, "Odoo sign-in approved", name)
+    }
+
+    fun webStats(): WebStats =
+        WebStats(sp.getInt("web_n", 0), sp.getLong("web_last", 0L), sp.getString("web_user", "") ?: "")
 
     /** Deletes the key from this phone. Odoo keeps its record until removed there. */
     fun removeProfile(alias: String) {
@@ -274,6 +311,9 @@ class Prefs(context: Context) {
         const val EV_REJECT = "reject"
         const val EV_FAILED = "failed"
         const val EV_REMOVED = "removed"
+        const val EV_WEB_LOGIN = "web_login"
+        const val KIND_USER = "user"
+        const val KIND_EMPLOYEE = "employee"
         const val DEFAULT_POS = "Point of Sale"
         private const val MAX_EVENTS = 50
         private val LOCK = Any()

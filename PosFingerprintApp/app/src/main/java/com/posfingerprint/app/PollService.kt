@@ -149,11 +149,19 @@ class PollService : Service() {
 
     private fun notifyRequest(req: JSONObject, receivedAt: Long) {
         val isRegister = req.getString("kind") == "register"
-        val title = if (isRegister) "Register your fingerprint" else "POS login request"
-        val text = if (isRegister) {
-            "Odoo is linking a fingerprint for " + req.optString("employee").ifEmpty { "an employee" }
-        } else {
-            "Tap to approve the login to " + req.optString("pos_name").ifEmpty { "the POS" }
+        val posName = req.optString("pos_name")
+        val isWeb = !isRegister &&
+            (req.optString("purpose") == "web" || posName == "Odoo login" || posName == "Odoo (web login)")
+        val who = req.optString("employee")
+        val title = when {
+            isRegister -> "Set up your fingerprint"
+            isWeb -> "Odoo sign-in request"
+            else -> "POS login request"
+        }
+        val text = when {
+            isRegister -> "Odoo is linking a fingerprint for " + who.ifEmpty { "you" }
+            isWeb -> "Someone is signing in to Odoo" + (if (who.isNotEmpty()) " as $who" else "") + ". Tap to review."
+            else -> "Tap to approve the login to " + posName.ifEmpty { "the POS" }
         }
         val intent = Intent(this, ApprovalActivity::class.java)
             .putExtra("request", req.toString())

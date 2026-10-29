@@ -34,6 +34,7 @@ class ApprovalActivity : AppCompatActivity() {
     private lateinit var ringOuter: View
     private lateinit var ringInner: View
     private lateinit var fpCircle: View
+    private lateinit var scanGlow: View
     private lateinit var ivFp: ImageView
     private lateinit var tvKind: TextView
     private lateinit var tvTitle: TextView
@@ -49,6 +50,10 @@ class ApprovalActivity : AppCompatActivity() {
     private var employee = ""
     private var posName = ""
     private var promptSubtitle = ""
+    /** True for an Odoo web sign-in (login page), false for a POS till login or a setup. */
+    private var isWeb = false
+    /** Prefs.KIND_USER or KIND_EMPLOYEE for a setup request, "" if the server didn't say. */
+    private var ownerKind = ""
     private var busy = false
     private var expired = false
     private var receivedAt = 0L
@@ -66,6 +71,7 @@ class ApprovalActivity : AppCompatActivity() {
         ringOuter = findViewById(R.id.ringOuter)
         ringInner = findViewById(R.id.ringInner)
         fpCircle = findViewById(R.id.fpCircle)
+        scanGlow = findViewById(R.id.scanGlow)
         ivFp = findViewById(R.id.ivFp)
         tvKind = findViewById(R.id.tvKind)
         tvTitle = findViewById(R.id.tvTitle)
@@ -118,16 +124,42 @@ class ApprovalActivity : AppCompatActivity() {
         challenge = req.getString("challenge")
         employee = req.optString("employee")
         posName = req.optString("pos_name").ifEmpty { Prefs.DEFAULT_POS }
+        isWeb = !isRegister && (
+            req.optString("purpose") == "web" || posName == "Odoo login" || posName == "Odoo (web login)"
+            )
+        ownerKind = detectOwnerKind()
         busy = false
 
         val who: String
-        if (isRegister) {
-            tvKind.text = "Fingerprint setup"
+        var personLabel = "Employee"
+        if (isRegister && ownerKind == Prefs.KIND_USER) {
+            tvKind.text = "Odoo login setup"
+            tvTitle.text = "Set up fingerprint login"
+            tvDetail.text = "Odoo wants ${employee.ifEmpty { "this user" }} to sign in to Odoo with a fingerprint on this phone, no password."
+            promptSubtitle = "Odoo login for ${employee.ifEmpty { "this user" }}"
+            who = employee.ifEmpty { "Not specified" }
+            personLabel = "User"
+            btnCancel.text = "Decline"
+        } else if (isRegister) {
+            tvKind.text = "POS fingerprint setup"
             tvTitle.text = "Register your fingerprint"
             tvDetail.text = "Odoo wants to link a fingerprint on this phone to ${employee.ifEmpty { "an employee" }}."
             promptSubtitle = "For ${employee.ifEmpty { "this employee" }}"
             who = employee.ifEmpty { "Not specified" }
             btnCancel.text = "Decline"
+        } else if (isWeb) {
+            val matches = myMatches()
+            who = when (matches.size) {
+                0 -> "No fingerprint on this phone"
+                1 -> prefs.employeeName(matches[0]).ifEmpty { employee.ifEmpty { "Registered user" } }
+                else -> employee.ifEmpty { "${matches.size} people, choose after scan" }
+            }
+            tvKind.text = "Odoo sign-in request"
+            tvTitle.text = "Approve Odoo sign-in"
+            tvDetail.text = "Someone is signing in to Odoo as $who. Scan only if this is you."
+            promptSubtitle = "Sign in to Odoo"
+            personLabel = "User"
+            btnCancel.text = "Reject"
         } else {
             tvKind.text = "POS login request"
             tvTitle.text = "Approve login"
@@ -142,8 +174,14 @@ class ApprovalActivity : AppCompatActivity() {
             btnCancel.text = "Reject"
         }
 
-        detail(R.id.rowEmployee, "Employee", who)
-        detail(R.id.rowTarget, if (isRegister) "Action" else "Point of Sale", if (isRegister) "Link fingerprint" else posName)
+        detail(R.id.rowEmployee, personLabel, who)
+        when {
+            isRegister && ownerKind == Prefs.KIND_USER -> detail(R.id.rowTarget, "Used for", "Odoo login page")
+            isRegister -> detail(R.id.rowTarget, "Used for", "POS till login")
+            isWeb -> detail(R.id.rowTarget, "Signing in to", "Odoo (web browser)")
+            else -> detail(R.id.rowTarget, "Point of Sale", posName)
+        }
+        setKindStyle()
         detail(R.id.rowServer, "Server", prefs.host.ifEmpty { "Unknown" })
         detail(R.id.rowTime, "Requested at", DateFormat.getTimeFormat(this).format(Date()))
 
@@ -154,6 +192,35 @@ class ApprovalActivity : AppCompatActivity() {
 
         getSystemService(NotificationManager::class.java).cancel(PollService.REQUEST_ID)
         begin() // go straight to the fingerprint prompt
+    }
+
+    /** The server says who the fingerprint is for; older servers only send a WebAuthn handle ("u12" = user). */
+    private fun detectOwnerKind(): String {
+        when (req.optString("owner_type")) {
+            "user" -> return Prefs.KIND_USER
+            "employee" -> return Prefs.KIND_EMPLOYEE
+        }
+        val handle = req.optString("user_id")
+        if (handle.isEmpty()) return ""
+        return try {
+            val raw = String(android.util.Base64.decode(handle, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP))
+            if (raw.startsWith("u")) Prefs.KIND_USER else Prefs.KIND_EMPLOYEE
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    /** Odoo sign-ins use a signal-blue badge with a globe; POS requests keep the default style. */
+    private fun setKindStyle() {
+        val odoo = isWeb || (isRegister && ownerKind == Prefs.KIND_USER)
+        Ui.tint(tvKind, getColor(if (odoo) R.color.signal else R.color.primary_container))
+        tvKind.setTextColor(getColor(if (odoo) R.color.white else R.color.on_primary_container))
+        val icon = getDrawable(if (odoo) R.drawable.ic_web else R.drawable.ic_store)?.mutate()
+        val size = Ui.dp(tvKind, 14)
+        icon?.setBounds(0, 0, size, size)
+        icon?.setTint(getColor(if (odoo) R.color.white else R.color.on_primary_container))
+        tvKind.setCompoundDrawablesRelative(icon, null, null, null)
+        tvKind.compoundDrawablePadding = Ui.dp(tvKind, 6)
     }
 
     private fun myMatches(): List<String> {
@@ -217,6 +284,7 @@ class ApprovalActivity : AppCompatActivity() {
 
     private fun setCircle(color: Int?, icon: Int) {
         fpCircle.backgroundTintList = color?.let { ColorStateList.valueOf(it) }
+        scanGlow.backgroundTintList = ColorStateList.valueOf(color ?: getColor(R.color.signal))
         ivFp.setImageResource(icon)
     }
 
@@ -370,7 +438,11 @@ class ApprovalActivity : AppCompatActivity() {
                 val ok = res.optBoolean("ok", false)
                 if (ok) {
                     RequestState.handled.add(token)
-                    if (isNew) prefs.recordRegistration(alias, employee) else prefs.recordLogin(alias, posName)
+                    when {
+                        isNew -> prefs.recordRegistration(alias, employee, ownerKind)
+                        isWeb -> prefs.recordWebLogin(alias)
+                        else -> prefs.recordLogin(alias, posName)
+                    }
                 } else {
                     if (isNew) KeyStoreHelper.delete(alias)
                     prefs.recordFailed(res.optString("error", "Rejected by Odoo"))
@@ -378,11 +450,19 @@ class ApprovalActivity : AppCompatActivity() {
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     if (ok) {
-                        if (isNew) {
+                        if (isNew && ownerKind == Prefs.KIND_USER) {
+                            showSuccess(
+                                "Fingerprint login ready",
+                                "${employee.ifEmpty { "This user" }} can now sign in to Odoo with a fingerprint, no password."
+                            )
+                        } else if (isNew) {
                             showSuccess(
                                 "Fingerprint registered",
                                 "${employee.ifEmpty { "This employee" }} can now sign in to the POS with this phone."
                             )
+                        } else if (isWeb) {
+                            val name = prefs.employeeName(alias).ifEmpty { "You" }
+                            showSuccess("Signed in to Odoo", "$name is being signed in on the browser.")
                         } else {
                             val name = prefs.employeeName(alias).ifEmpty { "You" }
                             showSuccess("Login approved", "$name is being signed in to $posName.")
@@ -408,7 +488,14 @@ class ApprovalActivity : AppCompatActivity() {
             return
         }
         RequestState.handled.add(token)
-        prefs.recordRejected(isRegister, if (isRegister) employee.ifEmpty { "Employee" } else posName)
+        prefs.recordRejected(
+            isRegister,
+            when {
+                isRegister -> employee.ifEmpty { "Employee" }
+                isWeb -> "Odoo sign-in"
+                else -> posName
+            }
+        )
         if (isRegister) {
             Thread {
                 try {
